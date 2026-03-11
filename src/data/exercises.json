@@ -1,0 +1,224 @@
+{
+  "exercises": [
+{
+      "id": 1,
+      "nombre": "Lagartijas",
+      "parteCuerpo": "Pecho",
+      "grupoSecundario": "Tríceps",
+      "dificultad": "Principiante",
+      "equipo": "bodyweight",
+      "descripcion": "Ejercicio clásico de empuje que trabaja principalmente el pecho usando el peso corporal.",
+      "seriesRecomendadas": 3,
+      "repeticiones": "10-15",
+      "caloriasEstimadas": 50,
+      "videoUrl": "",
+      "imageurl": ""
+    },
+    {
+      "id": 2,
+      "nombre": "Press de banca",
+      "parteCuerpo": "Pecho",
+      "grupoSecundario": "Hombros",
+      "dificultad": "Intermedio",
+      "equipo": "barra",
+      "descripcion": "Ejercicio compuesto para desarrollar fuerza y masa muscular en el pecho.",
+      "seriesRecomendadas": 4,
+      "repeticiones": "8-12",
+      "caloriasEstimadas": 80,
+      "videoUrl": "",
+      "imageurl": ""
+    },
+    {
+      "id": 3,
+      "nombre": "Dominadas",
+      "parteCuerpo": "Espalda",
+      "grupoSecundario": "Bíceps",
+      "dificultad": "Intermedio",
+      "equipo": "barra",
+      "descripcion": "Ejercicio de tracción que fortalece la espalda y los brazos.",
+      "seriesRecomendadas": 4,
+      "repeticiones": "6-10",
+      "caloriasEstimadas": 70,
+      "videoUrl": "",
+      "imageurl": ""
+    },
+    {
+      "id": 4,
+      "nombre": "Remo con barra",
+      "parteCuerpo": "Espalda",
+      "grupoSecundario": "Hombros",
+      "dificultad": "Intermedio",
+      "equipo": "barra",
+      "descripcion": "Movimiento compuesto que desarrolla grosor en la espalda.",
+      "seriesRecomendadas": 4,
+      "repeticiones": "8-12",
+      "caloriasEstimadas": 75,
+      "videoUrl": "",
+      "imageurl": ""
+    },
+    {
+      "id": 5,
+      "nombre": "Sentadillas",
+      "parteCuerpo": "Piernas",
+      "grupoSecundario": "Glúteos",
+      "dificultad": "Principiante",
+      "equipo": "bodyweight",
+      "descripcion": "Ejercicio fundamental para fortalecer piernas y glúteos.",
+      "seriesRecomendadas": 3,
+      "repeticiones": "12-15",
+      "caloriasEstimadas": 90,
+      "videoUrl": "",
+      "imageurl": ""
+    },
+    {
+      "id": 6,
+      "nombre": "Peso muerto",
+      "parteCuerpo": "Piernas",
+      "grupoSecundario": "Espalda",
+      "dificultad": "Intermedio",
+      "equipo": "barra",
+      "descripcion": "Ejercicio compuesto que trabaja la cadena posterior completa.",
+      "seriesRecomendadas": 4,
+      "repeticiones": "6-10",
+      "caloriasEstimadas": 100,
+      "videoUrl": "",
+      "imageurl": ""
+    },
+    {
+      "id": 7,
+      "nombre": "Press militar",
+      "parteCuerpo": "Hombros",
+      "grupoSecundario": "Tríceps",
+      "dificultad": "Intermedio",
+      "equipo": "barra",
+      "descripcion": "Ejercicio de empuje vertical para fortalecer los hombros.",
+      "seriesRecomendadas": 3,
+      "repeticiones": "8-12",
+      "caloriasEstimadas": 65,
+      "videoUrl": "",
+      "imageurl": ""
+    },
+    {
+      "id": 8,
+      "nombre": "Curl de bíceps con barra",
+      "parteCuerpo": "Bíceps",
+      "grupoSecundario": "Antebrazo",
+      "dificultad": "Principiante",
+      "equipo": "barra",
+      "descripcion": "Ejercicio de aislamiento para desarrollar el bíceps.",
+      "seriesRecomendadas": 3,
+      "repeticiones": "10-12",
+      "caloriasEstimadas": 40,
+      "videoUrl": "",
+      "imageurl": ""
+    },
+    {
+      "id": 9,
+      "nombre": "Fondos en paralelas",
+      "parteCuerpo": "Tríceps",
+      "grupoSecundario": "Pecho",
+      "dificultad": "Intermedio",
+      "equipo": "bodyweight",
+      "descripcion": "Ejercicio de empuje que fortalece tríceps y parte inferior del pecho.",
+      "seriesRecomendadas": 3,
+      "repeticiones": "8-12",
+      "caloriasEstimadas": 60,
+      "videoUrl": "",
+      "imageurl": ""
+    },
+    {
+      "id": 10,
+      "nombre": "Plancha",
+      "parteCuerpo": "Abdomen",
+      "grupoSecundario": "Espalda baja",
+      "dificultad": "Principiante",
+      "equipo": "bodyweight",
+      "descripcion": "Ejercicio isométrico para fortalecer el core.",
+      "seriesRecomendadas": 3,
+      "repeticiones": "30-60 segundos",
+      "caloriasEstimadas": 30,
+      "videoUrl": "",
+      "imageurl": ""
+    },
+    {
+      "id": 11,
+      "nombre": "Elevaciones laterales",
+      "parteCuerpo": "Hombros",
+      "dificultad": "Principiante",
+      "equipo": "mancuernas",
+      "imageurl": ""
+    },
+    {
+      "id": 12,
+      "nombre": "Curl de bíceps con barra",
+      "parteCuerpo": "Bíceps",
+      "dificultad": "Principiante",
+      "equipo": "barra",
+      "imageurl": ""
+    },
+    {
+      "id": 13,
+      "nombre": "Curl martillo",
+      "parteCuerpo": "Bíceps",
+      "dificultad": "Principiante",
+      "equipo": "mancuernas",
+      "imageurl": ""
+    },
+    {
+      "id": 14,
+      "nombre": "Fondos en paralelas",
+      "parteCuerpo": "Tríceps",
+      "dificultad": "Intermedio",
+      "equipo": "bodyweight",
+      "imageurl": ""
+    },
+    {
+      "id": 15,
+      "nombre": "Extensión de tríceps en polea",
+      "parteCuerpo": "Tríceps",
+      "dificultad": "Principiante",
+      "equipo": "máquina",
+      "imageurl": ""
+    },
+    {
+      "id": 16,
+      "nombre": "Plancha",
+      "parteCuerpo": "Abdomen",
+      "dificultad": "Principiante",
+      "equipo": "bodyweight",
+      "imageurl": ""
+    },
+    {
+      "id": 17,
+      "nombre": "Crunch abdominal",
+      "parteCuerpo": "Abdomen",
+      "dificultad": "Principiante",
+      "equipo": "bodyweight",
+      "imageurl": ""
+    },
+    {
+      "id": 18,
+      "nombre": "Elevaciones de piernas",
+      "parteCuerpo": "Abdomen",
+      "dificultad": "Intermedio",
+      "equipo": "bodyweight",
+      "imageurl": ""
+    },
+    {
+      "id": 19,
+      "nombre": "Hip thrust",
+      "parteCuerpo": "Glúteos",
+      "dificultad": "Intermedio",
+      "equipo": "barra",
+      "imageurl": ""
+    },
+    {
+      "id": 20,
+      "nombre": "Peso muerto",
+      "parteCuerpo": "Piernas",
+      "dificultad": "Intermedio",
+      "equipo": "barra",
+      "imageurl": ""
+    }
+  ]
+}
