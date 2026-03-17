@@ -1,40 +1,27 @@
-import { useEffect } from "react";
-import { View, StyleSheet } from "react-native";
-import TabNavigator from './src/navigation/TabNavigator'
+import { View } from "react-native";
+import TabNavigator from "./src/navigation/TabNavigator";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { supabase } from "./src/db_connection/supabase";
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import Login from "./src/screens/Login";
+import Main from "./src/screens/Main";
+
+const Stack = createNativeStackNavigator();
 
 export default function App() {
-
-  useEffect(() => {
-    testConnection()
-  }, [])
-
-  const testConnection = async () => {
-    const { data, error} = await supabase
-      .from('achievements')
-      .select('*')
-    
-      if(error) {
-        console.log('Error', error)
-      } else {
-        console.log('Conexion exitosa', data)
-      }
-  }
-  
   return (
     <SafeAreaProvider>
-      <View style={styles.container}>
-        <StatusBar style="light"/>
-        <TabNavigator />
-      </View>
+      <NavigationContainer>
+        <View style={{ flex: 1, backgroundColor: "#1E0F3A" }}>
+          <StatusBar style="light" />
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="Home" component={TabNavigator} />
+            <Stack.Screen name="Login" component={Login} />
+            <Stack.Screen name="Main" component={Main} />
+          </Stack.Navigator>
+        </View>
+      </NavigationContainer>
     </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1
-  }
-})

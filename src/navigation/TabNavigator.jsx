@@ -1,8 +1,5 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { NavigationContainer } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-
-// importar pantallas
 
 import Main from '../screens/Main';
 import Logros from '../screens/Logros'
@@ -13,18 +10,17 @@ const Tab = createBottomTabNavigator();
 
 export default function TabNavigator(){
     return (
-        <NavigationContainer>
-            <Tab.Navigator
-                screenOptions={{
-                    headerShown: false,
-                    tabBarStyle: {
-                        backgroundColor: "#1E0F3A",
-                        borderTopWidth: 0,
-                    },
-                    tabBarActiveTintColor: "#7B3FE4",
-                    tabBarInactiveTintColor: "gray"
-                }}
-            >
+        <Tab.Navigator
+            screenOptions={{
+                headerShown: false,
+                tabBarStyle: {
+                    backgroundColor: "#1E0F3A",
+                    borderTopWidth: 0,
+                },
+                tabBarActiveTintColor: "#7B3FE4",
+                tabBarInactiveTintColor: "gray"
+            }}
+        >
                 <Tab.Screen 
                     name="Principal" 
                     component = {Main}
@@ -55,6 +51,5 @@ export default function TabNavigator(){
                     />
                 
             </Tab.Navigator>
-        </NavigationContainer>
     );
 }

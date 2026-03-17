@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -15,15 +15,19 @@ import * as Progress from "react-native-progress";
 import fondoRutina from "../assets/img/space-background.jpg";
 import fondo1 from "../assets/img/fondo1.jpg";
 import popularHiit from "../assets/img/ejercicios_populares/popular_hiit.png";
-import popularYoga from "../assets/img/ejercicios_populares/popular_yoga_relajante.png"
+import popularYoga from "../assets/img/ejercicios_populares/popular_yoga_relajante.png";
 
 // Importación de categorias
 import PechoCat from "./categorias/pechoCat";
 import PiernasAbdomenCat from "./categorias/piernasAbdomenCat";
 import EspaldaCat from "./categorias/EspaldaCat";
 import BrazosCat from "./categorias/BrazosCat";
+import { useNavigation } from "@react-navigation/native";
 
 const Main = () => {
+  const navigation = useNavigation();
+
+  /* Variables para categorias, efectos visuales y enrutamiento*/
   const [selectedCategory, setSelectedCategory] = useState("Pecho");
   const categories = ["Pecho", "Piernas y abdomen", "Brazos", "Espalda"];
   const categoryComponents = {
@@ -40,12 +44,19 @@ const Main = () => {
           <Text style={styles.greeting}>Hola Miguel</Text>
           <Text style={styles.subtitle}>¿Listo para entrenar?</Text>
         </View>
-        <Image source={userProfile} style={styles.avatar} />
+        <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+          <Image source={userProfile} style={styles.avatar} />
+        </TouchableOpacity>
+        
       </View>
 
       {/* Racha card */}
       <ScrollView style={styles.container}>
-        <ImageBackground source={fondoRutina} style={styles.rachaCard} imageStyle={{borderRadius: 20}}>
+        <ImageBackground
+          source={fondoRutina}
+          style={styles.rachaCard}
+          imageStyle={{ borderRadius: 20 }}
+        >
           <View style={{ marginRight: 4 }}>
             <Text style={styles.rachaTitle}>🔥</Text>
           </View>
@@ -66,7 +77,11 @@ const Main = () => {
         </ImageBackground>
 
         {/* card principal */}
-        <ImageBackground source={fondo1} style={styles.mainCard} imageStyle={{borderRadius: 20}}>
+        <ImageBackground
+          source={fondo1}
+          style={styles.mainCard}
+          imageStyle={{ borderRadius: 20 }}
+        >
           <Text style={styles.mainTitle}>¿No tienes rutina?</Text>
           <Text style={styles.mainSubtitle}>Personaliza tu rutina</Text>
 
@@ -135,15 +150,27 @@ const Main = () => {
           <View style={styles.line}></View>
         </View>
 
-        <View style={styles.cardRow}>
-          <ImageBackground source={popularHiit} style={styles.exerciseCard} imageStyle={styles.popularExImg}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.cardRow}
+        >
+          <ImageBackground
+            source={popularHiit}
+            style={styles.exerciseCard}
+            imageStyle={styles.popularExImg}
+          >
             <Text style={styles.exerciseTitle}>Entrenamiento HIIT</Text>
           </ImageBackground>
 
-          <ImageBackground source={popularYoga} style={styles.exerciseCard} imageStyle={styles.popularExImg}>
+          <ImageBackground
+            source={popularYoga}
+            style={styles.exerciseCard}
+            imageStyle={styles.popularExImg}
+          >
             <Text style={styles.exerciseTitle}>Yoga relajante</Text>
           </ImageBackground>
-        </View>
+        </ScrollView>
 
         {/* Datos de esta semana */}
         <View style={styles.sectionCard}>
@@ -312,18 +339,22 @@ const styles = StyleSheet.create({
 
   cardRow: {
     flexDirection: "row",
+    paddingBottom: 15,
   },
 
   exerciseCard: {
     justifyContent: "center",
     alignItems: "center",
-    width: "100%",
-    height: "auto"
+    width: 200,
+    height: 120,
+    marginRight: 12,
+    borderRadius: 20,
+    overflow: "hidden",
   },
 
   popularExImg: {
-    width: "70%",
-    height: 120,
+    width: "100%",
+    height: "100%",
   },
 
   exerciseTitle: {
