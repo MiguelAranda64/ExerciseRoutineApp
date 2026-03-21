@@ -10,7 +10,7 @@ import {
   ImageBackground,
 } from "react-native";
 
-import userProfile from "../assets/img/user-profile-default.png";
+import { supabase } from "../db_connection/supabase";
 import * as Progress from "react-native-progress";
 import fondoRutina from "../assets/img/space-background.jpg";
 import fondo1 from "../assets/img/fondo1.jpg";
@@ -26,16 +26,93 @@ import { useNavigation } from "@react-navigation/native";
 
 const Main = () => {
   const navigation = useNavigation();
-
-  /* Variables para categorias, efectos visuales y enrutamiento*/
+  const [avatarUrl, setAvatarUrl] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("Pecho");
   const categories = ["Pecho", "Piernas y abdomen", "Brazos", "Espalda"];
+
   const categoryComponents = {
     Pecho: <PechoCat />,
     "Piernas y abdomen": <PiernasAbdomenCat />,
     Brazos: <BrazosCat />,
     Espalda: <EspaldaCat />,
   };
+
+  useEffect(() => {
+    async function loadProfileAvatar() {
+      const { data, error: sessionError } = await supabase.auth.getSession();
+      const session = data?.session;
+
+      if (sessionError) {
+        console.warn(
+          "Supabase session error:",
+          sessionError.message ?? sessionError,
+        );
+        return;
+      }
+
+      if (!session?.user) {
+        setAvatarUrl(null);
+        setIsLoggedIn(false);
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("avatar_url")
+        .eq("id", session.user.id)
+        .single();
+
+      if (profileError && profileError.code !== "PGRST116") {
+        // PGRST116 = no rows found
+        console.warn(
+          "Error loading profile:",
+          profileError.message ?? profileError,
+        );
+        return;
+      }
+
+      const avatarPath = profile?.avatar_url ?? null;
+
+      if (avatarPath) {
+        const { data: signedData, error: signedError } = await supabase.storage
+          .from("avatars")
+          .createSignedUrl(avatarPath, 60);
+
+        if (signedError) {
+          console.warn(
+            "Unable to create signed URL:",
+            signedError.message ?? signedError,
+          );
+          setAvatarUrl(null);
+        } else {
+          setAvatarUrl(signedData?.signedUrl ?? null);
+        }
+      } else {
+        setAvatarUrl(null);
+      }
+    }
+
+    loadProfileAvatar();
+
+    const { data: authData } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (session?.user) {
+          setIsLoggedIn(true);
+          loadProfileAvatar();
+        } else {
+          setIsLoggedIn(false);
+          setAvatarUrl(null);
+        }
+      },
+    );
+
+    const subscription = authData?.subscription;
+
+    return () => {
+      subscription?.unsubscribe?.();
+    };
+  }, []);
 
   return (
     <View style={{ flex: 1, backgroundColor: "#1E0F3A" }}>
@@ -44,10 +121,19 @@ const Main = () => {
           <Text style={styles.greeting}>Hola Miguel</Text>
           <Text style={styles.subtitle}>¿Listo para entrenar?</Text>
         </View>
-        <TouchableOpacity onPress={() => navigation.navigate("Login")}>
-          <Image source={userProfile} style={styles.avatar} />
+        {/* If session exists then navigate to Profile, otherwise to Login */}
+        <TouchableOpacity
+          onPress={(isLoggedIn ? () => navigation.navigate("Profile") : navigation.navigate("Login"))}
+        >
+          <Image
+            source={
+              avatarUrl
+                ? { uri: avatarUrl }
+                : require("../assets/img/profile_pic/blank-avatar.png")
+            }
+            style={styles.avatar}
+          />
         </TouchableOpacity>
-        
       </View>
 
       {/* Racha card */}

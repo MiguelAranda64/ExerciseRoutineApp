@@ -6,6 +6,8 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import Login from "./src/screens/Login";
 import Main from "./src/screens/Main";
+import Profile from "./src/screens/Profile";
+import Avatar from "./src/screens/Avatar";
 
 const Stack = createNativeStackNavigator();
 
@@ -19,6 +21,8 @@ export default function App() {
             <Stack.Screen name="Home" component={TabNavigator} />
             <Stack.Screen name="Login" component={Login} />
             <Stack.Screen name="Main" component={Main} />
+            <Stack.Screen name="Profile" component={Profile} />
+            <Stack.Screen name="Avatar" component={Avatar} />
           </Stack.Navigator>
         </View>
       </NavigationContainer>
