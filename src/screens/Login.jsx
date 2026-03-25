@@ -38,7 +38,6 @@ const Login = () => {
         return;
       }
       navigation.navigate("Home");
-
     } catch (err) {
       const msg = err?.msg || "Error desconocido al iniciar sesión.";
       setError(msg);

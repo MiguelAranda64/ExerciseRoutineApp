@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../db_connection/supabase";
-import { StyleSheet, View, Alert } from "react-native";
+import { StyleSheet, View, Alert, TextInput, Text, TouchableOpacity } from "react-native";
 import Avatar from "./Avatar";
 
-const Profile = ({ id, email }) => {
+const Profile = ({ route, navigation}) => {
+  const { id, email } = route.params;
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
   const [surname, setSurname] = useState("");
@@ -11,7 +12,6 @@ const Profile = ({ id, email }) => {
   const [weight, setWeight] = useState(null);
   const [height, setHeight] = useState(null);
 
-  /* UNDER CONSTRUCTION... NOT WORKING YET */
   useEffect(() => {
     if (id) getProfile();
   }, [id]);

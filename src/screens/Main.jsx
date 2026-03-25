@@ -56,6 +56,7 @@ const Main = () => {
         setIsLoggedIn(false);
         return;
       }
+      setIsLoggedIn(true);
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
@@ -123,7 +124,21 @@ const Main = () => {
         </View>
         {/* If session exists then navigate to Profile, otherwise to Login */}
         <TouchableOpacity
-          onPress={(isLoggedIn ? () => navigation.navigate("Profile") : navigation.navigate("Login"))}
+          onPress={async () => {
+            if (isLoggedIn) {
+              const { data } = await supabase.auth.getSession();
+              const session = data?.session;
+
+              if (session) {
+                navigation.navigate("Profile", {
+                  id: session.user.id,
+                  email: session.user.email,
+                });
+              }
+            } else {
+              navigation.navigate("Login");
+            }
+          }}
         >
           <Image
             source={
