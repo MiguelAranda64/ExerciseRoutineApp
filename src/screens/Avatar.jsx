@@ -9,8 +9,9 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { supabase } from "../db_connection/supabase";
+import * as FileSystem from "expo-file-system";
 
-export default function Avatar({ url, size = 120, onUpload }) {
+export default function Avatar({ url, size = 120, onUpload, userId }) {
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [uploading, setUploading] = useState(false);
   /* Every time the `url` prop changes, refresh the signed (or public) URL */
@@ -34,19 +35,21 @@ export default function Avatar({ url, size = 120, onUpload }) {
     }
   }
 
+  // Upload the image to Supabase Storage
   async function pickImageAndUpload() {
     try {
       const permission =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        alert("Permission to access photos is required to upload an avatar.");
+        alert("Permission to access photos is required.");
         return;
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ["images"],
         allowsEditing: true,
         quality: 0.8,
+        base64: true,
       });
 
       if (result.canceled || !result.assets?.length) return;
@@ -54,24 +57,31 @@ export default function Avatar({ url, size = 120, onUpload }) {
       setUploading(true);
 
       const asset = result.assets[0];
-      const uri = asset.uri;
-      const response = await fetch(uri);
-      const blob = await response.blob();
+      const base64 = asset.base64; // string representing the image in base64 format
 
-      const fileExt = uri.split(".").pop().split("?")[0];
-      const fileName = `${Math.random().toString(36).slice(2)}.${fileExt}`;
-      const filePath = fileName;
+      // Convertir base64 a ArrayBuffer
+      const binaryString = atob(base64); // converts string to binary
+      const bytes = new Uint8Array(binaryString.length); // converts binary string to byte array
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
 
-      const { error: uploadError } = await supabase.storage
+      const fileName = `avatar_${userId}.jpg`;
+
+      const { data, error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(filePath, blob, { upsert: true });
+        .upload(fileName, bytes.buffer, {
+          contentType: "image/jpeg",
+          upsert: true,
+        });
+
       if (uploadError) throw uploadError;
 
-      onUpload?.(filePath);
-      downloadImage(filePath);
+      onUpload?.(fileName);
+      downloadImage(fileName);
     } catch (error) {
-      console.log("Error uploading image: ", error?.message ?? error);
-      alert(error?.message ?? "Unable to upload image");
+      console.error("Error uploading image:", error?.message ?? error);
+      alert(`Error uploading image: ${error?.message ?? "Unknown error"}`);
     } finally {
       setUploading(false);
     }
@@ -109,7 +119,7 @@ export default function Avatar({ url, size = 120, onUpload }) {
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
-    backgroundColor: "#1E0F3A"
+    backgroundColor: "#1E0F3A",
   },
   image: {
     backgroundColor: "#ddd",
