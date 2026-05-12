@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -16,13 +16,11 @@ import fondoRutina from "../assets/img/space-background.jpg";
 import fondo1 from "../assets/img/fondo1.jpg";
 import popularHiit from "../assets/img/ejercicios_populares/popular_hiit.png";
 import popularYoga from "../assets/img/ejercicios_populares/popular_yoga_relajante.png";
-
-// Importación de categorias
 import PechoCat from "./categorias/pechoCat";
 import PiernasAbdomenCat from "./categorias/piernasAbdomenCat";
 import EspaldaCat from "./categorias/EspaldaCat";
 import BrazosCat from "./categorias/BrazosCat";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 
 const Main = () => {
   const navigation = useNavigation();
@@ -38,64 +36,71 @@ const Main = () => {
     Espalda: <EspaldaCat />,
   };
 
-  useEffect(() => {
-    async function loadProfileAvatar() {
-      const { data, error: sessionError } = await supabase.auth.getSession();
-      const session = data?.session;
+  // Extraemos la lógica de carga en un useCallback para reutilizarla
+  const loadProfileAvatar = useCallback(async () => {
+    const { data, error: sessionError } = await supabase.auth.getSession();
+    const session = data?.session;
 
-      if (sessionError) {
-        console.warn(
-          "Supabase session error:",
-          sessionError.message ?? sessionError,
-        );
-        return;
-      }
-
-      if (!session?.user) {
-        setAvatarUrl(null);
-        setIsLoggedIn(false);
-        return;
-      }
-      setIsLoggedIn(true);
-
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("avatar_url")
-        .eq("id", session.user.id)
-        .single();
-
-      if (profileError && profileError.code !== "PGRST116") {
-        // PGRST116 = no rows found
-        console.warn(
-          "Error loading profile:",
-          profileError.message ?? profileError,
-        );
-        return;
-      }
-
-      const avatarPath = profile?.avatar_url ?? null;
-
-      if (avatarPath) {
-        const { data: signedData, error: signedError } = await supabase.storage
-          .from("avatars")
-          .createSignedUrl(avatarPath, 60);
-
-        if (signedError) {
-          console.warn(
-            "Unable to create signed URL:",
-            signedError.message ?? signedError,
-          );
-          setAvatarUrl(null);
-        } else {
-          setAvatarUrl(signedData?.signedUrl ?? null);
-        }
-      } else {
-        setAvatarUrl(null);
-      }
+    if (sessionError) {
+      console.warn(
+        "Supabase session error:",
+        sessionError.message ?? sessionError,
+      );
+      return;
     }
 
-    loadProfileAvatar();
+    if (!session?.user) {
+      setAvatarUrl(null);
+      setIsLoggedIn(false);
+      return;
+    }
+    setIsLoggedIn(true);
 
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("avatar_url")
+      .eq("id", session.user.id)
+      .single();
+
+    if (profileError && profileError.code !== "PGRST116") {
+      console.warn(
+        "Error loading profile:",
+        profileError.message ?? profileError,
+      );
+      return;
+    }
+
+    const avatarPath = profile?.avatar_url ?? null;
+
+    if (avatarPath) {
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from("avatars")
+        .createSignedUrl(avatarPath, 60 * 60);
+
+      if (signedError) {
+        console.warn(
+          "Unable to create signed URL:",
+          signedError.message ?? signedError,
+        );
+        setAvatarUrl(null);
+      } else {
+        setAvatarUrl(signedData?.signedUrl ?? null);
+      }
+    } else {
+      setAvatarUrl(null);
+    }
+  }, []);
+
+  // Se ejecuta cada vez que Main vuelve a estar en pantalla
+  // (incluyendo cuando regresas de Profile tras actualizar)
+  useFocusEffect(
+    useCallback(() => {
+      loadProfileAvatar();
+    }, [loadProfileAvatar])
+  );
+
+  // Solo para el listener de cambios de sesión (login/logout)
+  useEffect(() => {
     const { data: authData } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (session?.user) {
@@ -113,7 +118,7 @@ const Main = () => {
     return () => {
       subscription?.unsubscribe?.();
     };
-  }, []);
+  }, [loadProfileAvatar]);
 
   return (
     <View style={{ flex: 1, backgroundColor: "#1E0F3A" }}>
@@ -173,7 +178,7 @@ const Main = () => {
           </View>
 
           <View>
-            <Text style={styles.rachaCount}>20/100</Text>
+            <Text style={{color: "white", marginLeft: "auto"}}>20/100</Text>
           </View>
         </ImageBackground>
 
@@ -331,10 +336,6 @@ const styles = StyleSheet.create({
 
   rachaProgreso: {
     marginTop: 5,
-  },
-
-  rachaCount: {
-    color: "white",
   },
 
   mainCard: {

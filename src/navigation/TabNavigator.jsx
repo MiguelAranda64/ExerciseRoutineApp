@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import Main from '../screens/Main';
 import Logros from '../screens/Logros'
-import Ajustes from '../screens/ajustes'
+import Ajustes from '../screens/Ajustes'
 
 const Tab = createBottomTabNavigator();
 

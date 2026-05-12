@@ -18,7 +18,8 @@ const Logros = () => {
   const [achievements, setAchievements] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
+  const unlockedCount = achievements.filter((a) => a.unlocked).length; // Count how many achievements are unlocked
+  const totalAchievements = achievements.length; // Total number of achievements
 
   useEffect(() => {
     loadAchievements();
@@ -45,14 +46,20 @@ const Logros = () => {
       /* Get user_achievements in case they are unlocked by the user */
       const { data: unlocked } = await supabase
         .from("user_achievements")
-        .select("achievement_id")
+        .select("achievement_id, completed_at")
         .eq("user_id", user.id);
 
       /* If achievements are unlocked then compare user.achievement_id and achievement.id */
-      const achievementsWithStatus = achievementsData.map((a) => ({
-        ...a,
-        unlocked: unlocked?.some((u) => u.achievement_id === a.id),
-      }));
+      const achievementsWithStatus = achievementsData.map((a) => {
+        const userAchievement = unlocked?.find(
+          (u) => u.achievement_id === a.id,
+        );
+        return {
+          ...a,
+          unlocked: !!userAchievement, // If userAchievement exists, then it's unlocked
+          completed_at: userAchievement?.completed_at ?? null, // Add completed_at to the achievement object if it's unlocked, otherwise set it to null
+        };
+      });
 
       setAchievements(achievementsWithStatus);
     } catch (err) {
@@ -83,18 +90,20 @@ const Logros = () => {
 
           <View style={{ marginRight: 4 }}>
             <Text style={styles.DoneAchievementsTitle}>
-              48 / 100 logros desbloqueados
+              {unlockedCount} / {totalAchievements} logros desbloqueados
             </Text>
             <Progress.Bar
               style={styles.AchievementProgress}
-              progress={0.3}
+              progress={unlockedCount / totalAchievements || 0}
               width={272}
               color={"#f7d307"}
             />
           </View>
 
-          <View>
-            <Text style={{ color: "white" }}>20/100</Text>
+          <View style={{ marginLeft: "auto" }}>
+            <Text style={{ color: "white" }}>
+              {Math.round((unlockedCount / totalAchievements) * 100) || 0}%
+            </Text>
           </View>
         </ImageBackground>
 
@@ -121,8 +130,26 @@ const Logros = () => {
                   <Text style={{ color: "white" }}>{a.title}</Text>
                   <Text style={{ color: "white" }}>{a.description}</Text>
                   {/* If user has unlocked this achievement, it shows the points of completition */}
-                  {a.unlocked && (
-                    <Text style={{ color: "white" }}>{a.points}</Text>
+                  {a.unlocked ? (
+                    <View>
+                      {/* <Text style={{ color: "white" }}>{a.points} pts</Text> */}
+                      <Text style={{ color: "#BFA2FF", fontSize: 12 }}> Desbloqueado el {""}
+                        {a.completed_at
+                          ? new Date(a.completed_at).toLocaleDateString(
+                              "es-MX",
+                              {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              },
+                            )
+                          : ""}
+                      </Text>
+                    </View>
+                  ) : (
+                    <Text style={{ color: "#BFA2FF", fontSize: 12 }}>
+                      Logro bloqueado
+                    </Text>
                   )}
                 </View>
               ))

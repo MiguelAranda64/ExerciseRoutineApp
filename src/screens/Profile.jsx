@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../db_connection/supabase";
 import {
   StyleSheet,
@@ -9,6 +9,8 @@ import {
   TouchableOpacity,
 } from "react-native";
 import Avatar from "./Avatar";
+import { Entypo } from "@expo/vector-icons";
+import { useFocusEffect } from "@react-navigation/native";
 
 const Profile = ({ route, navigation }) => {
   const { id, email } = route.params;
@@ -16,8 +18,54 @@ const Profile = ({ route, navigation }) => {
   const [name, setName] = useState("");
   const [surname, setSurname] = useState("");
   const [avatar_url, setAvatarurl] = useState("");
-  const [weight, setWeight] = useState(null);
-  const [height, setHeight] = useState(null);
+  const [weight, setWeight] = useState("");
+  const [height, setHeight] = useState("");
+  const [originalData, setOriginalData] = useState(null);
+  const [pendingImageFile, setPendingImageFile] = useState(null);
+  const [localImageUri, setLocalImageUri] = useState(null);
+
+  // Determine if there are unsaved changes by comparing current state with original data
+  const hasUnsavedChanges = useCallback(() => {
+    if (!originalData) return false;
+    return (
+      name !== originalData.name ||
+      surname !== originalData.surname ||
+      weight !== originalData.weight ||
+      height !== originalData.height ||
+      pendingImageFile !== null // image selected but not saved
+    );
+  }, [name, surname, weight, height, pendingImageFile, originalData]);
+
+  // Intercept navigation attempts to warn about unsaved changes
+  useFocusEffect(
+    useCallback(() => {
+      const unsubscribe = navigation.addListener("beforeRemove", (e) => {
+        if (!hasUnsavedChanges()) return; // Unless there are unsaved changes, don't do anything
+
+        e.preventDefault(); // Block navigation
+
+        Alert.alert(
+          "Cambios sin guardar",
+          "Los cambios no se han guardado. ¿Deseas salir de todas formas?",
+          [
+            { text: "Cancelar", style: "cancel" },
+            {
+              text: "Salir sin guardar",
+              style: "destructive",
+              onPress: () => {
+                // Discard pending image if user chooses to leave without saving
+                setPendingImageFile(null);
+                setLocalImageUri(null);
+                navigation.dispatch(e.data.action);
+              },
+            },
+          ],
+        );
+      });
+
+      return unsubscribe;
+    }, [navigation, hasUnsavedChanges]),
+  );
 
   useEffect(() => {
     if (id) getProfile();
@@ -38,30 +86,35 @@ const Profile = ({ route, navigation }) => {
     // If no session, you might want to redirect to login
     if (!session) {
       console.log("No active session - user should log in again");
-      // navigation.navigate('Login'); 
+      // navigation.navigate('Login');
     }
   }
 
   async function getProfile() {
     try {
       setLoading(true);
-
       const { data, error, status } = await supabase
         .from("profiles")
         .select(`name, surname, avatar_url, weight, height, email`)
         .eq("id", id)
         .single();
 
-      if (error && status !== 406) {
-        throw error;
-      }
+      if (error && status !== 406) throw error;
 
       if (data) {
-        setName(data.name);
-        setSurname(data.surname);
-        setAvatarurl(data.avatar_url);
-        setWeight(data.weight);
-        setHeight(data.height);
+        const loaded = {
+          name: data.name ?? "",
+          surname: data.surname ?? "",
+          avatar_url: data.avatar_url ?? "",
+          weight: data.weight?.toString() ?? "",
+          height: data.height?.toString() ?? "",
+        };
+        setName(loaded.name);
+        setSurname(loaded.surname);
+        setAvatarurl(loaded.avatar_url);
+        setWeight(loaded.weight);
+        setHeight(loaded.height);
+        setOriginalData(loaded);
       }
     } catch (error) {
       if (error instanceof Error) {
@@ -72,31 +125,58 @@ const Profile = ({ route, navigation }) => {
     }
   }
 
-  async function updateProfile({ name, surname, avatar_url, weight, height }) {
+  // --- NUEVO: Sube la imagen al bucket y devuelve el path ---
+  async function uploadPendingImage() {
+    if (!pendingImageFile) return avatar_url; // Sin imagen nueva, usa la actual
+
+    const { file, fileName, mimeType } = pendingImageFile;
+
+    const { data, error } = await supabase.storage
+      .from("avatars")
+      .upload(fileName, file, {
+        contentType: mimeType,
+        upsert: true,
+      });
+
+    if (error) throw new Error("Error subiendo imagen: " + error.message);
+
+    return data.path; // Devuelve el path en el bucket
+  }
+
+  async function updateProfile() {
     try {
       setLoading(true);
-      console.log("Updating profile for user:", id);
+
+      // Primero sube la imagen si hay una pendiente
+      const finalAvatarUrl = await uploadPendingImage();
 
       const updates = {
-        id: id,
-        email: email,  // Add the email field - it's required!
+        id,
+        email,
         name,
         surname,
-        avatar_url,
+        avatar_url: finalAvatarUrl,
         weight,
         height,
         updated_at: new Date(),
       };
 
-      console.log("Profile updates:", updates);
+      const { error } = await supabase.from("profiles").upsert(updates);
+      if (error) throw error;
 
-      let { error } = await supabase.from("profiles").upsert(updates);
+      // Actualiza estado con la imagen ya subida
+      setAvatarurl(finalAvatarUrl);
+      setPendingImageFile(null);
+      setLocalImageUri(null);
 
-
-      if (error) {
-        console.log("Update error:", error);
-        throw error;
-      }
+      // Actualiza el "original" para que ya no detecte cambios
+      setOriginalData({
+        name,
+        surname,
+        avatar_url: finalAvatarUrl,
+        weight,
+        height,
+      });
 
       Alert.alert("Éxito", "Perfil actualizado correctamente");
     } catch (error) {
@@ -107,27 +187,45 @@ const Profile = ({ route, navigation }) => {
     }
   }
 
+  // --- NUEVO: Recibe el archivo local desde Avatar SIN subirlo aún ---
+  // Avatar debe llamar a este callback con { file, fileName, mimeType, localUri }
+  // en lugar de subir directamente al bucket.
+  function handleImageSelected({ file, fileName, mimeType, localUri }) {
+    setPendingImageFile({ file, fileName, mimeType });
+    setLocalImageUri(localUri); // Para mostrar preview inmediato
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.body}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Entypo name={"arrow-left"} size={60} color="#bda7ee" />
+        </TouchableOpacity>
+
+        {/* 
+          Avatar ahora recibe dos props nuevas:
+          - onImageSelected: callback con el archivo local (NO sube al bucket)
+          - localImageUri: URI local para mostrar el preview antes de guardar
+          
+          Elimina la lógica de upload dentro de Avatar y llama a onImageSelected
+          en su lugar. Ver instrucciones debajo del componente.
+        */}
+
         <Avatar
-          url={avatar_url}
+          url={localImageUri || avatar_url}
           size={100}
           userId={id}
-          onUpload={(filePath) => {
-            setAvatarurl(filePath);
-            updateProfile({
-              name,
-              surname,
-              avatar_url: filePath,
-              weight,
-              height,
-            });
-          }}
+          onImageSelected={handleImageSelected}
         />
+
+        {/* Indicador visual de cambios sin guardar */}
+        {hasUnsavedChanges() && (
+          <Text style={styles.unsavedBadge}>● Cambios sin guardar</Text>
+        )}
+
         <Text style={styles.title}>Perfil</Text>
 
-        <View style={[styles.verticalSpacing, styles.mt20]}>
+        <View style={[styles.verticalSpacing, styles.mt10]}>
           <Text style={styles.label}>Correo electrónico</Text>
           <TextInput
             editable={false}
@@ -139,11 +237,11 @@ const Profile = ({ route, navigation }) => {
           />
         </View>
 
-        <View style={[styles.verticalSpacing, styles.mt20]}>
+        <View style={[styles.verticalSpacing, styles.mt10]}>
           <Text style={styles.label}>Nombre</Text>
           <TextInput
             value={name}
-            onChangeText={(text) => setName(text)}
+            onChangeText={setName}
             placeholder=""
             autoCapitalize="none"
             keyboardType="text"
@@ -151,11 +249,11 @@ const Profile = ({ route, navigation }) => {
           />
         </View>
 
-        <View style={[styles.verticalSpacing, styles.mt20]}>
+        <View style={[styles.verticalSpacing, styles.mt10]}>
           <Text style={styles.label}>Apellido</Text>
           <TextInput
             value={surname}
-            onChangeText={(text) => setSurname(text)}
+            onChangeText={setSurname}
             placeholder=""
             autoCapitalize="none"
             keyboardType="text"
@@ -163,11 +261,11 @@ const Profile = ({ route, navigation }) => {
           />
         </View>
 
-        <View style={[styles.verticalSpacing, styles.mt20]}>
+        <View style={[styles.verticalSpacing, styles.mt10]}>
           <Text style={styles.label}>Peso</Text>
           <TextInput
             value={weight}
-            onChangeText={(text) => setWeight(text)}
+            onChangeText={setWeight}
             placeholder=""
             autoCapitalize="none"
             keyboardType="numeric"
@@ -175,11 +273,11 @@ const Profile = ({ route, navigation }) => {
           />
         </View>
 
-        <View style={[styles.verticalSpacing, styles.mt20]}>
+        <View style={[styles.verticalSpacing, styles.mt10]}>
           <Text style={styles.label}>Estatura</Text>
           <TextInput
             value={height}
-            onChangeText={(text) => setHeight(text)}
+            onChangeText={setHeight}
             placeholder=""
             autoCapitalize="none"
             keyboardType="numeric"
@@ -187,19 +285,16 @@ const Profile = ({ route, navigation }) => {
           />
         </View>
 
-        <View style={[styles.verticalSpacing, styles.mt20]}>
+        <View style={[styles.verticalSpacing, styles.mt10]}>
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={() =>
-              updateProfile({ name, surname, avatar_url, weight, height })
-            }
+            onPress={updateProfile}
             disabled={loading}
           >
-            <Text style={styles.title}>Actualizar</Text>
+            <Text style={styles.title}>
+              {loading ? "Guardando..." : "Actualizar"}
+            </Text>
           </TouchableOpacity>
-          <Text style={styles.buttonText}>
-            {loading ? "Cargando..." : "Perfil Actualizado"}
-          </Text>
         </View>
       </View>
     </View>
@@ -215,17 +310,17 @@ const styles = StyleSheet.create({
   body: {
     marginTop: 40,
   },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-  },
+  // avatar: {
+  //   width: 100,
+  //   height: 100,
+  //   borderRadius: 50,
+  // },
   verticalSpacing: {
     paddingTop: 4,
     paddingBottom: 4,
   },
-  mt20: {
-    marginTop: 20,
+  mt10: {
+    marginTop: 10,
   },
   title: {
     color: "white",
@@ -245,7 +340,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   button: {
-    marginTop: 20,
+    marginTop: 15,
     paddingVertical: 12,
     backgroundColor: "#5A2D82",
     borderRadius: 8,
@@ -255,9 +350,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#5A2D82",
     opacity: 0.6,
   },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "400",
+    unsavedBadge: {
+    color: "#f0a500",
+    fontSize: 13,
+    marginTop: 6,
+    marginBottom: 2,
   },
 });
 
