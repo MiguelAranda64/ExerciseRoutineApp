@@ -1,0 +1,45 @@
+{
+  "idioma": {
+    "titulo": "Language",
+    "subtitulo": "Choose the language you want to use in MiEntrenador",
+    "seccion": "App language",
+    "activo": "Active",
+    "nota": "The language change applies immediately across the entire app."
+  },
+  "privacidad": {
+    "titulo": "Privacy",
+    "hero_titulo": "Your privacy, our priority",
+    "hero_sub": "At MiEntrenador we believe your training data belongs to you.",
+    "actualizado": "Updated on",
+    "datos_titulo": "Data we collect",
+    "uso_titulo": "How do we use your data?",
+    "derechos_titulo": "Your rights",
+    "faq_titulo": "Frequently asked questions",
+    "contacto_titulo": "Contact",
+    "contacto_label": "Have questions or requests?"
+  },
+  "notificaciones": {
+    "titulo": "Notifications",
+    "seccion_entrenamiento": "Training",
+    "seccion_actividad": "Activity",
+    "seccion_app": "App",
+    "recordatorio": "Daily reminder",
+    "recordatorio_desc": "Get a reminder so you don't skip your session",
+    "hora": "Reminder time",
+    "hora_desc": "Tap to change",
+    "logros": "Achievements & goals",
+    "logros_desc": "Get notified when you reach a new milestone",
+    "novedades": "News & updates",
+    "novedades_desc": "New features, routines and content",
+    "permiso_titulo": "Permission required",
+    "permiso_msg": "Enable notifications in your device settings to use this feature.",
+    "nota": "To receive notifications, make sure they are enabled in your device settings.",
+    "listo": "Done"
+  },
+  "comun": {
+    "guardar": "Save",
+    "cancelar": "Cancel",
+    "aceptar": "Accept",
+    "volver": "Back"
+  }
+}

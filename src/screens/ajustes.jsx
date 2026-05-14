@@ -12,7 +12,6 @@ import {
   FontAwesome5,
 } from "@expo/vector-icons";
 
-// Cada sección con sus items
 const SECTIONS = [
   {
     title: "Cuenta",
@@ -50,26 +49,26 @@ const SettingsItem = ({ item, isFirst, isLast, onPress }) => (
       onPress={() => onPress?.(item.screen)}
       activeOpacity={0.7}
     >
-      {/* Icono izquierdo */}
+      {/* Left icon */}
       <View style={styles.iconWrapper}>
         <Ionicons name={item.icon} size={20} color="#A47BFF" />
       </View>
 
-      {/* Texto */}
+      {/* Text */}
       <Text style={styles.itemLabel}>{item.label}</Text>
 
-      {/* Flecha derecha */}
+      {/* Right arrow */}
       <Ionicons name="chevron-forward" size={20} color="#7B5DB5" />
     </TouchableOpacity>
 
-    {/* Separador interno (excepto en el último) */}
+    {/* Internal separator (except on the last one) */}
     {!isLast && <View style={styles.separator} />}
   </>
 );
 
 const Ajustes = ({ navigation }) => {
   const handlePress = (screen) => {
-    // Navega a la pantalla correspondiente cuando estén creadas
+    // Navigate to the corresponding screen when an item is pressed
     navigation?.navigate?.(screen);
   };
 
@@ -86,10 +85,10 @@ const Ajustes = ({ navigation }) => {
       >
         {SECTIONS.map((section) => (
           <View key={section.title} style={styles.section}>
-            {/* Título de sección */}
+            {/* Section title */}
             <Text style={styles.sectionTitle}>{section.title}</Text>
 
-            {/* Card con todos los items */}
+            {/* Card with all items */}
             <View style={styles.card}>
               {section.items.map((item, index) => (
                 <SettingsItem

@@ -6,7 +6,9 @@
     "orientation": "portrait",
     "icon": "./src/assets/img/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "experiments": {
+      "newArchEnabled": true
+    },
     "splash": {
       "image": "./src/assets/img/splash-icon.png",
       "resizeMode": "contain",
@@ -19,15 +21,11 @@
       "adaptiveIcon": {
         "foregroundImage": "./src/assets/img/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true
+      }
     },
     "web": {
       "favicon": "./src/assets/img/favicon.png"
     },
-    "plugins": [
-      "expo-secure-store",
-      "@react-native-community/datetimepicker"
-    ]
+    "plugins": ["expo-secure-store"]
   }
 }

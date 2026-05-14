@@ -12,19 +12,27 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import * as Notifications from "expo-notifications";
+let Notifications = null;
+import Constants from "expo-constants";
 
-// ─── Clave de almacenamiento ───────────────────────────────────────────────
+// ─── Detecta si estamos corriendo en Expo Go ──────────────────────────────
+// En Expo Go SDK 53+, las notificaciones push remotas no están soportadas.
+// Las notificaciones locales (scheduleNotificationAsync) sí funcionan en dev build.
+const IS_EXPO_GO = Constants.executionEnvironment === "storeClient";
+
 const STORAGE_KEY = "@notificaciones_prefs";
 
-// ─── Configuración de cómo se muestran las notificaciones en foreground ────
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+// ─── Configuration of notification behavior ───────────────────────────────
+if (!IS_EXPO_GO) {
+  Notifications = require("expo-notifications");
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -35,38 +43,49 @@ function formatHour(date) {
 }
 
 async function requestPermission() {
-  const { status: existing } = await Notifications.getPermissionsAsync();
-  if (existing === "granted") return true;
+  if (IS_EXPO_GO) return false; // Don't request permissions in Expo Go since they won't work anyway
+  try {
+    const { status: existing } = await Notifications.getPermissionsAsync();
+    if (existing === "granted") return true;
 
-  const { status } = await Notifications.requestPermissionsAsync();
-  return status === "granted";
+    const { status } = await Notifications.requestPermissionsAsync();
+    return status === "granted";
+  } catch (e) {
+    console.warn("Error requesting notification permissions", e);
+    return false;
+  }
 }
 
-// Cancela y re-agenda el recordatorio diario
+// Cancel and reschedule the workout reminder at the specified time (used when toggling on/off and when changing time)
+// Use the correct trigger format for the current Expo SDK version (SDK 53+)
 async function scheduleWorkoutReminder(hour, minute) {
-  await Notifications.cancelAllScheduledNotificationsAsync();
-
-  await Notifications.scheduleNotificationAsync({
-    content: {
-      title: "¡Hora de entrenar! 💪",
-      body: "Tu sesión de hoy te está esperando.",
-      sound: true,
-    },
-    trigger: {
-      hour,
-      minute,
-      repeats: true,
-    },
-  });
+  if (IS_EXPO_GO) return;
+  try {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "¡Hora de entrenar! 💪",
+        body: "Tu sesión de hoy te está esperando.",
+        sound: true,
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
+        hour,
+        minute,
+      },
+    });
+  } catch (e) {
+    console.warn("Error scheduling workout reminder", e);
+  }
 }
 
-// ─── Componente principal ─────────────────────────────────────────────────
+// ─── Main component ─────────────────────────────────────────────────
 
 const Notificaciones = ({ navigation }) => {
   // Estado de toggles
   const [workoutReminder, setWorkoutReminder] = useState(false);
-  const [logrosYMetas, setLogrosYMetas]       = useState(false);
-  const [novedades, setNovedades]             = useState(false);
+  const [logrosYMetas, setLogrosYMetas] = useState(false);
+  const [novedades, setNovedades] = useState(false);
 
   // Hora del recordatorio
   const [reminderTime, setReminderTime] = useState(() => {
@@ -75,10 +94,10 @@ const Notificaciones = ({ navigation }) => {
     return d;
   });
 
-  // Visibilidad del DateTimePicker
+  // DateTime Picker visibility (solo se muestra si el recordatorio de entrenamiento está activo)
   const [showPicker, setShowPicker] = useState(false);
 
-  // ── Cargar preferencias guardadas ──────────────────────────────────────
+  // ── Load saved preferences ──────────────────────────────────────
   useEffect(() => {
     (async () => {
       try {
@@ -86,9 +105,11 @@ const Notificaciones = ({ navigation }) => {
         if (!raw) return;
 
         const saved = JSON.parse(raw);
-        if (saved.workoutReminder !== undefined) setWorkoutReminder(saved.workoutReminder);
-        if (saved.logrosYMetas   !== undefined) setLogrosYMetas(saved.logrosYMetas);
-        if (saved.novedades      !== undefined) setNovedades(saved.novedades);
+        if (saved.workoutReminder !== undefined)
+          setWorkoutReminder(saved.workoutReminder);
+        if (saved.logrosYMetas !== undefined)
+          setLogrosYMetas(saved.logrosYMetas);
+        if (saved.novedades !== undefined) setNovedades(saved.novedades);
         if (saved.reminderTime) {
           const d = new Date();
           d.setHours(saved.reminderTime.hour, saved.reminderTime.minute, 0, 0);
@@ -100,14 +121,14 @@ const Notificaciones = ({ navigation }) => {
     })();
   }, []);
 
-  // ── Guardar preferencias cada vez que cambian ──────────────────────────
+  // ── Save preferences once they change ──────────────────────────
   async function savePrefs(overrides = {}) {
     const prefs = {
       workoutReminder,
       logrosYMetas,
       novedades,
       reminderTime: {
-        hour:   reminderTime.getHours(),
+        hour: reminderTime.getHours(),
         minute: reminderTime.getMinutes(),
       },
       ...overrides,
@@ -121,7 +142,8 @@ const Notificaciones = ({ navigation }) => {
 
   // ── Toggle recordatorio de entrenamiento ──────────────────────────────
   async function handleWorkoutToggle(value) {
-    if (value) {
+    // In Expo Go, show an alert instead of trying to schedule notifications (which won't work)
+    if (IS_EXPO_GO && value) {
       const granted = await requestPermission();
       if (!granted) {
         Alert.alert(
@@ -142,16 +164,16 @@ const Notificaciones = ({ navigation }) => {
     savePrefs({ workoutReminder: value });
   }
 
-  // ── Cambio de hora ─────────────────────────────────────────────────────
+  // ── Change time ──────────────────────────────────────────────────────
   async function handleTimeChange(event, selectedDate) {
-    // En Android el picker se cierra solo; en iOS se mantiene abierto
+    // In Android, the picker closes immediately after selecting a time, so we can save the new time right away. In iOS, we wait until the user presses "Done".
     if (Platform.OS === "android") setShowPicker(false);
     if (!selectedDate) return;
 
     setReminderTime(selectedDate);
 
-    // Si el recordatorio está activo, re-agenda con la nueva hora
-    if (workoutReminder) {
+    // If the workout reminder is active, reschedule it with the new time
+    if (workoutReminder && !IS_EXPO_GO) {
       await scheduleWorkoutReminder(
         selectedDate.getHours(),
         selectedDate.getMinutes(),
@@ -160,7 +182,7 @@ const Notificaciones = ({ navigation }) => {
 
     savePrefs({
       reminderTime: {
-        hour:   selectedDate.getHours(),
+        hour: selectedDate.getHours(),
         minute: selectedDate.getMinutes(),
       },
     });
@@ -175,14 +197,14 @@ const Notificaciones = ({ navigation }) => {
     value,
     onValueChange,
     isFirst = false,
-    isLast  = false,
+    isLast = false,
   }) => (
     <>
       <View
         style={[
           styles.item,
           isFirst && styles.itemFirst,
-          isLast  && styles.itemLast,
+          isLast && styles.itemLast,
         ]}
       >
         <View style={styles.iconWrapper}>
@@ -209,7 +231,10 @@ const Notificaciones = ({ navigation }) => {
     <View style={styles.root}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation?.goBack()} style={styles.backBtn}>
+        <TouchableOpacity
+          onPress={() => navigation?.goBack()}
+          style={styles.backBtn}
+        >
           <Ionicons name="arrow-back" size={28} color="#A47BFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notificaciones</Text>
@@ -219,21 +244,35 @@ const Notificaciones = ({ navigation }) => {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
+        {/* Informative Banner for Expo Go */}
+        {IS_EXPO_GO && (
+          <View style={styles.expoGoBanner}>
+            <Ionicons
+              name="information-circle-outline"
+              size={16}
+              color="#FBBF24"
+            />
+            <Text style={styles.expoGoBannerText}>
+              Vista previa — Los recordatorios funcionan completos en el build
+              de producción.
+            </Text>
+          </View>
+        )}
 
-        {/* ── Sección: Recordatorio de entrenamiento ── */}
+        {/* ── Section: Workout Reminder ── */}
         <Text style={styles.sectionTitle}>Entrenamiento</Text>
         <View style={styles.card}>
           {renderToggleItem({
-            icon:          "barbell-outline",
-            label:         "Recordatorio diario",
-            description:   "Recibe un aviso para no saltarte tu sesión",
-            value:         workoutReminder,
+            icon: "barbell-outline",
+            label: "Recordatorio diario",
+            description: "Recibe un aviso para no saltarte tu sesión",
+            value: workoutReminder,
             onValueChange: handleWorkoutToggle,
-            isFirst:       true,
-            isLast:        !workoutReminder,
+            isFirst: true,
+            isLast: !workoutReminder,
           })}
 
-          {/* Selector de hora — visible solo si el recordatorio está activo */}
+          {/* Time Picker — visible only if the reminder is active */}
           {workoutReminder && (
             <>
               <View style={styles.separator} />
@@ -263,7 +302,7 @@ const Notificaciones = ({ navigation }) => {
             is24Hour={true}
             display={Platform.OS === "ios" ? "spinner" : "default"}
             onChange={handleTimeChange}
-            // En iOS necesitamos un botón para cerrar
+            // In iOS we need a "Done" button to close the picker
             {...(Platform.OS === "ios" && {
               style: { backgroundColor: "#2A1660" },
             })}
@@ -283,13 +322,16 @@ const Notificaciones = ({ navigation }) => {
         <Text style={styles.sectionTitle}>Actividad</Text>
         <View style={styles.card}>
           {renderToggleItem({
-            icon:          "trophy-outline",
-            label:         "Logros y metas",
-            description:   "Entérate cuando alcances un nuevo logro",
-            value:         logrosYMetas,
-            onValueChange: (v) => { setLogrosYMetas(v); savePrefs({ logrosYMetas: v }); },
-            isFirst:       true,
-            isLast:        true,
+            icon: "trophy-outline",
+            label: "Logros y metas",
+            description: "Entérate cuando alcances un nuevo logro",
+            value: logrosYMetas,
+            onValueChange: (v) => {
+              setLogrosYMetas(v);
+              savePrefs({ logrosYMetas: v });
+            },
+            isFirst: true,
+            isLast: true,
           })}
         </View>
 
@@ -297,24 +339,31 @@ const Notificaciones = ({ navigation }) => {
         <Text style={styles.sectionTitle}>App</Text>
         <View style={styles.card}>
           {renderToggleItem({
-            icon:          "megaphone-outline",
-            label:         "Novedades y actualizaciones",
-            description:   "Nuevas funciones, rutinas y contenido",
-            value:         novedades,
-            onValueChange: (v) => { setNovedades(v); savePrefs({ novedades: v }); },
-            isFirst:       true,
-            isLast:        true,
+            icon: "megaphone-outline",
+            label: "Novedades y actualizaciones",
+            description: "Nuevas funciones, rutinas y contenido",
+            value: novedades,
+            onValueChange: (v) => {
+              setNovedades(v);
+              savePrefs({ novedades: v });
+            },
+            isFirst: true,
+            isLast: true,
           })}
         </View>
 
         {/* Nota de permiso del sistema */}
         <View style={styles.noteBox}>
-          <Ionicons name="information-circle-outline" size={16} color="#7B5DB5" />
+          <Ionicons
+            name="information-circle-outline"
+            size={16}
+            color="#7B5DB5"
+          />
           <Text style={styles.noteText}>
-            Para recibir notificaciones, asegúrate de que estén habilitadas en los ajustes de tu dispositivo.
+            Para recibir notificaciones, asegúrate de que estén habilitadas en
+            los ajustes de tu dispositivo.
           </Text>
         </View>
-
       </ScrollView>
     </View>
   );

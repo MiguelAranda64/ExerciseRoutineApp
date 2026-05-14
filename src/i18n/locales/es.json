@@ -1,0 +1,45 @@
+{
+  "idioma": {
+    "titulo": "Idioma",
+    "subtitulo": "Elige el idioma en que quieres usar MiEntrenador",
+    "seccion": "Idioma de la app",
+    "activo": "Activo",
+    "nota": "El cambio de idioma se aplica de inmediato en toda la app."
+  },
+  "privacidad": {
+    "titulo": "Privacidad",
+    "hero_titulo": "Tu privacidad, nuestra prioridad",
+    "hero_sub": "En MiEntrenador creemos que tus datos de entrenamiento son tuyos.",
+    "actualizado": "Actualizado el",
+    "datos_titulo": "Datos que recopilamos",
+    "uso_titulo": "¿Para qué usamos tus datos?",
+    "derechos_titulo": "Tus derechos",
+    "faq_titulo": "Preguntas frecuentes",
+    "contacto_titulo": "Contacto",
+    "contacto_label": "¿Tienes dudas o solicitudes?"
+  },
+  "notificaciones": {
+    "titulo": "Notificaciones",
+    "seccion_entrenamiento": "Entrenamiento",
+    "seccion_actividad": "Actividad",
+    "seccion_app": "App",
+    "recordatorio": "Recordatorio diario",
+    "recordatorio_desc": "Recibe un aviso para no saltarte tu sesión",
+    "hora": "Hora del recordatorio",
+    "hora_desc": "Toca para cambiar",
+    "logros": "Logros y metas",
+    "logros_desc": "Entérate cuando alcances un nuevo logro",
+    "novedades": "Novedades y actualizaciones",
+    "novedades_desc": "Nuevas funciones, rutinas y contenido",
+    "permiso_titulo": "Permiso requerido",
+    "permiso_msg": "Activa las notificaciones en los ajustes de tu dispositivo para usar esta función.",
+    "nota": "Para recibir notificaciones, asegúrate de que estén habilitadas en los ajustes de tu dispositivo.",
+    "listo": "Listo"
+  },
+  "comun": {
+    "guardar": "Guardar",
+    "cancelar": "Cancelar",
+    "aceptar": "Aceptar",
+    "volver": "Volver"
+  }
+}
