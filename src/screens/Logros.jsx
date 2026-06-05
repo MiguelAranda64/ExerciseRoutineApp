@@ -9,6 +9,7 @@ import {
   ImageBackground,
 } from "react-native";
 
+//test
 import * as Progress from "react-native-progress";
 import fondoRutina from "../assets/img/space-background.jpg";
 import { achievementsWithStatus } from "../services/achievements";
