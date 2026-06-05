@@ -5,6 +5,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import Login from "./src/screens/Login";
+import Register from "./src/screens/Register";
 import Main from "./src/screens/Main";
 import Profile from "./src/screens/Profile";
 import Avatar from "./src/screens/Avatar";
@@ -29,6 +30,7 @@ export default function App() {
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name="Home" component={TabNavigator} />
             <Stack.Screen name="Login" component={Login} />
+            <Stack.Screen name="Register" component={Register} />
             <Stack.Screen name="Main" component={Main} />
             <Stack.Screen name="Profile" component={Profile} />
             <Stack.Screen name="Avatar" component={Avatar} />

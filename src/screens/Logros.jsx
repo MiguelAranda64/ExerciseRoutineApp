@@ -8,10 +8,11 @@ import {
   ScrollView,
   ImageBackground,
 } from "react-native";
-import { supabase } from "../db_connection/supabase";
 
 import * as Progress from "react-native-progress";
 import fondoRutina from "../assets/img/space-background.jpg";
+import { achievementsWithStatus } from "../services/achievements";
+import { getUser } from "../services/auth";
 
 const Logros = () => {
   const [user, setUser] = useState(null);
@@ -29,39 +30,12 @@ const Logros = () => {
     setLoading(true);
     setError(null);
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
+      const userData = await getUser();
+      setUser(userData);
 
-      const { data: achievementsData, error } = await supabase
-        .from("achievements")
-        .select("*");
+      const data = await achievementsWithStatus(userData.id ?? null);
 
-      if (!user) {
-        setAchievements(achievementsData);
-        return;
-      }
-
-      /* Get user_achievements in case they are unlocked by the user */
-      const { data: unlocked } = await supabase
-        .from("user_achievements")
-        .select("achievement_id, completed_at")
-        .eq("user_id", user.id);
-
-      /* If achievements are unlocked then compare user.achievement_id and achievement.id */
-      const achievementsWithStatus = achievementsData.map((a) => {
-        const userAchievement = unlocked?.find(
-          (u) => u.achievement_id === a.id,
-        );
-        return {
-          ...a,
-          unlocked: !!userAchievement, // If userAchievement exists, then it's unlocked
-          completed_at: userAchievement?.completed_at ?? null, // Add completed_at to the achievement object if it's unlocked, otherwise set it to null
-        };
-      });
-
-      setAchievements(achievementsWithStatus);
+      setAchievements(data);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -165,7 +139,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 40,
+    marginTop: 20,
     backgroundColor: "#1E0F3A",
     padding: 20,
   },

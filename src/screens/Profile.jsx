@@ -7,9 +7,11 @@ import {
   TextInput,
   Text,
   TouchableOpacity,
+  ScrollView,
+  StatusBar,
 } from "react-native";
 import Avatar from "./Avatar";
-import { Entypo } from "@expo/vector-icons";
+import { Entypo, Feather } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 
 const Profile = ({ route, navigation }) => {
@@ -24,7 +26,6 @@ const Profile = ({ route, navigation }) => {
   const [pendingImageFile, setPendingImageFile] = useState(null);
   const [localImageUri, setLocalImageUri] = useState(null);
 
-  // Determine if there are unsaved changes by comparing current state with original data
   const hasUnsavedChanges = useCallback(() => {
     if (!originalData) return false;
     return (
@@ -32,18 +33,15 @@ const Profile = ({ route, navigation }) => {
       surname !== originalData.surname ||
       weight !== originalData.weight ||
       height !== originalData.height ||
-      pendingImageFile !== null // image selected but not saved
+      pendingImageFile !== null
     );
   }, [name, surname, weight, height, pendingImageFile, originalData]);
 
-  // Intercept navigation attempts to warn about unsaved changes
   useFocusEffect(
     useCallback(() => {
       const unsubscribe = navigation.addListener("beforeRemove", (e) => {
-        if (!hasUnsavedChanges()) return; // Unless there are unsaved changes, don't do anything
-
-        e.preventDefault(); // Block navigation
-
+        if (!hasUnsavedChanges()) return;
+        e.preventDefault();
         Alert.alert(
           "Cambios sin guardar",
           "Los cambios no se han guardado. ¿Deseas salir de todas formas?",
@@ -53,18 +51,16 @@ const Profile = ({ route, navigation }) => {
               text: "Salir sin guardar",
               style: "destructive",
               onPress: () => {
-                // Discard pending image if user chooses to leave without saving
                 setPendingImageFile(null);
                 setLocalImageUri(null);
                 navigation.dispatch(e.data.action);
               },
             },
-          ],
+          ]
         );
       });
-
       return unsubscribe;
-    }, [navigation, hasUnsavedChanges]),
+    }, [navigation, hasUnsavedChanges])
   );
 
   useEffect(() => {
@@ -73,20 +69,13 @@ const Profile = ({ route, navigation }) => {
   }, [id]);
 
   async function checkAuthStatus() {
-    const {
-      data: { session },
-      error,
-    } = await supabase.auth.getSession();
+    const { data: { session }, error } = await supabase.auth.getSession();
     if (error) {
-      console.log("Error checking auth status:", error);
       Alert.alert("Error", "No se pudo verificar el estado de autenticación.");
       return;
     }
-
-    // If no session, you might want to redirect to login
     if (!session) {
       console.log("No active session - user should log in again");
-      // navigation.navigate('Login');
     }
   }
 
@@ -117,244 +106,407 @@ const Profile = ({ route, navigation }) => {
         setOriginalData(loaded);
       }
     } catch (error) {
-      if (error instanceof Error) {
-        Alert.alert(error.message);
-      }
+      if (error instanceof Error) Alert.alert(error.message);
     } finally {
       setLoading(false);
     }
   }
 
-  // --- NUEVO: Sube la imagen al bucket y devuelve el path ---
   async function uploadPendingImage() {
-    if (!pendingImageFile) return avatar_url; // Sin imagen nueva, usa la actual
-
+    if (!pendingImageFile) return avatar_url;
     const { file, fileName, mimeType } = pendingImageFile;
-
     const { data, error } = await supabase.storage
       .from("avatars")
-      .upload(fileName, file, {
-        contentType: mimeType,
-        upsert: true,
-      });
-
+      .upload(fileName, file, { contentType: mimeType, upsert: true });
     if (error) throw new Error("Error subiendo imagen: " + error.message);
-
-    return data.path; // Devuelve el path en el bucket
+    return data.path;
   }
 
   async function updateProfile() {
     try {
       setLoading(true);
-
-      // Primero sube la imagen si hay una pendiente
       const finalAvatarUrl = await uploadPendingImage();
-
       const updates = {
-        id,
-        email,
-        name,
-        surname,
+        id, email, name, surname,
         avatar_url: finalAvatarUrl,
-        weight,
-        height,
+        weight, height,
         updated_at: new Date(),
       };
-
       const { error } = await supabase.from("profiles").upsert(updates);
       if (error) throw error;
 
-      // Actualiza estado con la imagen ya subida
       setAvatarurl(finalAvatarUrl);
       setPendingImageFile(null);
       setLocalImageUri(null);
-
-      // Actualiza el "original" para que ya no detecte cambios
-      setOriginalData({
-        name,
-        surname,
-        avatar_url: finalAvatarUrl,
-        weight,
-        height,
-      });
-
-      Alert.alert("Éxito", "Perfil actualizado correctamente");
+      setOriginalData({ name, surname, avatar_url: finalAvatarUrl, weight, height });
+      Alert.alert("✓ Guardado", "Perfil actualizado correctamente");
     } catch (error) {
-      console.error("Profile update error:", error);
       if (error instanceof Error) Alert.alert("Error", error.message);
     } finally {
       setLoading(false);
     }
   }
 
-  // --- NUEVO: Recibe el archivo local desde Avatar SIN subirlo aún ---
-  // Avatar debe llamar a este callback con { file, fileName, mimeType, localUri }
-  // en lugar de subir directamente al bucket.
+  // --- Logout ---
+  async function handleLogout() {
+    Alert.alert(
+      "Cerrar sesión",
+      "¿Estás seguro de que quieres salir?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Cerrar sesión",
+          style: "destructive",
+          onPress: async () => {
+            const { error } = await supabase.auth.signOut();
+            if (error) {
+              Alert.alert("Error", "No se pudo cerrar la sesión.");
+              return;
+            }
+            // Navega a la pantalla de login (ajusta el nombre de la ruta)
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "Login" }],
+            });
+          },
+        },
+      ]
+    );
+  }
+
   function handleImageSelected({ file, fileName, mimeType, localUri }) {
     setPendingImageFile({ file, fileName, mimeType });
-    setLocalImageUri(localUri); // Para mostrar preview inmediato
+    setLocalImageUri(localUri);
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.body}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Entypo name={"arrow-left"} size={60} color="#bda7ee" />
+      <StatusBar barStyle="light-content" />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.goBack()}>
+          <Entypo name="arrow-left" size={22} color="#c4a8ff" />
         </TouchableOpacity>
 
-        {/* 
-          Avatar ahora recibe dos props nuevas:
-          - onImageSelected: callback con el archivo local (NO sube al bucket)
-          - localImageUri: URI local para mostrar el preview antes de guardar
-          
-          Elimina la lógica de upload dentro de Avatar y llama a onImageSelected
-          en su lugar. Ver instrucciones debajo del componente.
-        */}
+        <Text style={styles.headerTitle}>Mi perfil</Text>
 
-        <Avatar
-          url={localImageUri || avatar_url}
-          size={100}
-          userId={id}
-          onImageSelected={handleImageSelected}
-        />
-
-        {/* Indicador visual de cambios sin guardar */}
-        {hasUnsavedChanges() && (
-          <Text style={styles.unsavedBadge}>● Cambios sin guardar</Text>
-        )}
-
-        <Text style={styles.title}>Perfil</Text>
-
-        <View style={[styles.verticalSpacing, styles.mt10]}>
-          <Text style={styles.label}>Correo electrónico</Text>
-          <TextInput
-            editable={false}
-            value={email}
-            placeholder=""
-            autoCapitalize="none"
-            keyboardType="email-address"
-            style={styles.input}
-          />
-        </View>
-
-        <View style={[styles.verticalSpacing, styles.mt10]}>
-          <Text style={styles.label}>Nombre</Text>
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            placeholder=""
-            autoCapitalize="none"
-            keyboardType="text"
-            style={styles.input}
-          />
-        </View>
-
-        <View style={[styles.verticalSpacing, styles.mt10]}>
-          <Text style={styles.label}>Apellido</Text>
-          <TextInput
-            value={surname}
-            onChangeText={setSurname}
-            placeholder=""
-            autoCapitalize="none"
-            keyboardType="text"
-            style={styles.input}
-          />
-        </View>
-
-        <View style={[styles.verticalSpacing, styles.mt10]}>
-          <Text style={styles.label}>Peso</Text>
-          <TextInput
-            value={weight}
-            onChangeText={setWeight}
-            placeholder=""
-            autoCapitalize="none"
-            keyboardType="numeric"
-            style={styles.input}
-          />
-        </View>
-
-        <View style={[styles.verticalSpacing, styles.mt10]}>
-          <Text style={styles.label}>Estatura</Text>
-          <TextInput
-            value={height}
-            onChangeText={setHeight}
-            placeholder=""
-            autoCapitalize="none"
-            keyboardType="numeric"
-            style={styles.input}
-          />
-        </View>
-
-        <View style={[styles.verticalSpacing, styles.mt10]}>
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={updateProfile}
-            disabled={loading}
-          >
-            <Text style={styles.title}>
-              {loading ? "Guardando..." : "Actualizar"}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {/* Botón de logout */}
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+          <Feather name="log-out" size={18} color="#ff6b8a" />
+          <Text style={styles.logoutText}>Salir</Text>
+        </TouchableOpacity>
       </View>
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Avatar section */}
+        <View style={styles.avatarSection}>
+          <View style={styles.avatarGlow}>
+            <Avatar
+              url={localImageUri || avatar_url}
+              size={100}
+              userId={id}
+              onImageSelected={handleImageSelected}
+            />
+          </View>
+
+          <Text style={styles.userName}>
+            {name || surname ? `${name} ${surname}`.trim() : "Tu nombre"}
+          </Text>
+          <Text style={styles.userEmail}>{email}</Text>
+
+          {hasUnsavedChanges() && (
+            <View style={styles.unsavedBadge}>
+              <View style={styles.unsavedDot} />
+              <Text style={styles.unsavedText}>Cambios sin guardar</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Form card */}
+        <View style={styles.card}>
+          <Text style={styles.sectionLabel}>INFORMACIÓN PERSONAL</Text>
+
+          <Field label="Correo electrónico" icon="mail">
+            <TextInput
+              editable={false}
+              value={email}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              style={[styles.input, styles.inputDisabled]}
+              placeholderTextColor="#4a3570"
+            />
+          </Field>
+
+          <View style={styles.row}>
+            <View style={styles.rowField}>
+              <Field label="Nombre" icon="user">
+                <TextInput
+                  value={name}
+                  onChangeText={setName}
+                  autoCapitalize="words"
+                  style={styles.input}
+                  placeholderTextColor="#4a3570"
+                />
+              </Field>
+            </View>
+            <View style={styles.rowField}>
+              <Field label="Apellido" icon="user">
+                <TextInput
+                  value={surname}
+                  onChangeText={setSurname}
+                  autoCapitalize="words"
+                  style={styles.input}
+                  placeholderTextColor="#4a3570"
+                />
+              </Field>
+            </View>
+          </View>
+
+          <Text style={[styles.sectionLabel, { marginTop: 20 }]}>MÉTRICAS</Text>
+
+          <View style={styles.row}>
+            <View style={styles.rowField}>
+              <Field label="Peso (kg)" icon="activity">
+                <TextInput
+                  value={weight}
+                  onChangeText={setWeight}
+                  keyboardType="numeric"
+                  style={styles.input}
+                  placeholderTextColor="#4a3570"
+                />
+              </Field>
+            </View>
+            <View style={styles.rowField}>
+              <Field label="Estatura (cm)" icon="trending-up">
+                <TextInput
+                  value={height}
+                  onChangeText={setHeight}
+                  keyboardType="numeric"
+                  style={styles.input}
+                  placeholderTextColor="#4a3570"
+                />
+              </Field>
+            </View>
+          </View>
+        </View>
+
+        {/* Save button */}
+        <TouchableOpacity
+          style={[styles.saveBtn, loading && styles.saveBtnDisabled]}
+          onPress={updateProfile}
+          disabled={loading}
+          activeOpacity={0.85}
+        >
+          {loading ? (
+            <Text style={styles.saveBtnText}>Guardando...</Text>
+          ) : (
+            <>
+              <Feather name="check" size={18} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.saveBtnText}>Guardar cambios</Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        <View style={{ height: 40 }} />
+      </ScrollView>
     </View>
   );
 };
 
+// Helper component para campos con label e icono
+const Field = ({ label, icon, children }) => (
+  <View style={styles.fieldWrapper}>
+    <View style={styles.fieldLabel}>
+      <Feather name={icon} size={12} color="#7c5cbf" style={{ marginRight: 5 }} />
+      <Text style={styles.label}>{label}</Text>
+    </View>
+    {children}
+  </View>
+);
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1E0F3A",
+    backgroundColor: "#120829",
+  },
+
+  // Header
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
+    paddingTop: 56,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(108, 79, 170, 0.2)",
   },
-  body: {
-    marginTop: 40,
+  headerTitle: {
+    color: "#e8d9ff",
+    fontSize: 17,
+    fontWeight: "600",
+    letterSpacing: 0.5,
   },
-  // avatar: {
-  //   width: 100,
-  //   height: 100,
-  //   borderRadius: 50,
-  // },
-  verticalSpacing: {
-    paddingTop: 4,
-    paddingBottom: 4,
+  iconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: "rgba(108, 79, 170, 0.15)",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  mt10: {
+  logoutBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 107, 138, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 107, 138, 0.25)",
+    gap: 6,
+  },
+  logoutText: {
+    color: "#ff6b8a",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+
+  // Scroll
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+  },
+
+  // Avatar section
+  avatarSection: {
+    alignItems: "center",
+    marginBottom: 28,
+  },
+  avatarGlow: {
+    shadowColor: "#9b6dff",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 20,
+    elevation: 10,
+    marginBottom: 14,
+  },
+  userName: {
+    color: "#f0e6ff",
+    fontSize: 22,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  userEmail: {
+    color: "#7c5cbf",
+    fontSize: 13,
+    marginTop: 4,
+  },
+  unsavedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
     marginTop: 10,
+    backgroundColor: "rgba(240, 165, 0, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(240, 165, 0, 0.3)",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    gap: 6,
   },
-  title: {
-    color: "white",
-    fontSize: 26,
+  unsavedDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#f0a500",
+  },
+  unsavedText: {
+    color: "#f0a500",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+
+  // Card
+  card: {
+    backgroundColor: "rgba(44, 27, 77, 0.5)",
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "rgba(108, 79, 170, 0.25)",
+    marginBottom: 20,
+  },
+  sectionLabel: {
+    color: "#5a3d8a",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    marginBottom: 14,
+  },
+
+  // Fields
+  row: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  rowField: {
+    flex: 1,
+  },
+  fieldWrapper: {
+    marginBottom: 14,
+  },
+  fieldLabel: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
   },
   label: {
-    color: "#6c4faa",
-    marginBottom: 4,
+    color: "#7c5cbf",
+    fontSize: 12,
+    fontWeight: "500",
+    letterSpacing: 0.3,
   },
   input: {
-    backgroundColor: "#2c1b4d",
-    color: "white",
+    backgroundColor: "rgba(18, 8, 41, 0.6)",
+    color: "#e8d9ff",
     borderWidth: 1,
-    borderColor: "#6c4faa",
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    borderColor: "rgba(108, 79, 170, 0.35)",
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    fontSize: 15,
   },
-  button: {
-    marginTop: 15,
-    paddingVertical: 12,
-    backgroundColor: "#5A2D82",
-    borderRadius: 8,
+  inputDisabled: {
+    color: "#5a3d8a",
+    borderColor: "rgba(108, 79, 170, 0.15)",
+  },
+
+  // Save button
+  saveBtn: {
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    borderRadius: 16,
+    backgroundColor: "#6c3db5",
+    shadowColor: "#9b6dff",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
   },
-  buttonDisabled: {
-    backgroundColor: "#5A2D82",
-    opacity: 0.6,
+  saveBtnDisabled: {
+    opacity: 0.5,
+    shadowOpacity: 0,
   },
-    unsavedBadge: {
-    color: "#f0a500",
-    fontSize: 13,
-    marginTop: 6,
-    marginBottom: 2,
+  saveBtnText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.5,
   },
 });
 

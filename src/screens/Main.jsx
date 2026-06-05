@@ -1,14 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Image,
-  TouchableOpacity,
-  ScrollView,
-  Pressable,
-  ImageBackground,
-} from "react-native";
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, Pressable, ImageBackground} from "react-native";
 
 import { supabase } from "../db_connection/supabase";
 import * as Progress from "react-native-progress";
@@ -21,6 +12,7 @@ import PiernasAbdomenCat from "./categorias/piernasAbdomenCat";
 import EspaldaCat from "./categorias/EspaldaCat";
 import BrazosCat from "./categorias/BrazosCat";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { getSession, getProfile } from "../services/auth";
 
 const Main = () => {
   const navigation = useNavigation();
@@ -36,17 +28,13 @@ const Main = () => {
     Espalda: <EspaldaCat />,
   };
 
-  // Extraemos la lógica de carga en un useCallback para reutilizarla
+  // reuse logic using useCallback
   const loadProfileAvatar = useCallback(async () => {
-    const { data, error: sessionError } = await supabase.auth.getSession();
-    const session = data?.session;
+    const session = await getSession();
 
-    if (sessionError) {
-      console.warn(
-        "Supabase session error:",
-        sessionError.message ?? sessionError,
-      );
-      return;
+    if(!session){
+      console.warn("No hay sesion activa");
+      return
     }
 
     if (!session?.user) {
@@ -56,20 +44,7 @@ const Main = () => {
     }
     setIsLoggedIn(true);
 
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("avatar_url")
-      .eq("id", session.user.id)
-      .single();
-
-    if (profileError && profileError.code !== "PGRST116") {
-      console.warn(
-        "Error loading profile:",
-        profileError.message ?? profileError,
-      );
-      return;
-    }
-
+    const profile = await getProfile(session.user.id)
     const avatarPath = profile?.avatar_url ?? null;
 
     if (avatarPath) {
@@ -293,7 +268,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 40,
+    marginTop: 20,
     backgroundColor: "#1E0F3A",
     padding: 20,
   },
